@@ -8,6 +8,10 @@
 void thread(void* arg)
 {
   printf(1, "My argument is %d.\n", *((int*)arg));
+  int i;
+  for(i = 0; i < 100; ++i){
+  malloc(4096);
+  }
 }
 
 int
@@ -18,6 +22,10 @@ main(int argc, char *argv[])
     printf(1, "Failed to create thread\n");
   }
   printf(1, "Joining thread\n");
+  int i;
+  for(i = 0; i < 100; ++i){
+  malloc(4096);
+  }
   thread_join();
   exit();
   return 0;

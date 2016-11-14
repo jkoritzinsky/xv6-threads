@@ -17,7 +17,7 @@ main(int argc, char *argv[])
   if(thread_create(thread, &arg) < 0) {
     printf(1, "Failed to create thread\n");
   }
-  
+  printf(1, "Joining thread\n");
   thread_join();
   exit();
   return 0;

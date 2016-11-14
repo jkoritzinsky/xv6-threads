@@ -470,9 +470,9 @@ int clone(void* fcnStart, void* arg, void* stack)
   if(copyout(np->pgdir, (uint)stack, ustack, sizeof(ustack)) < 0)
     goto bad;
   
-  proc->tf->eip = (uint)fcnStart;
-  proc->tf->esp = (uint)stack;
-  
+  np->tf->eip = (uint)fcnStart;
+  np->tf->esp = (uint)stack;
+  np->threadStackStart = stack;
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -489,7 +489,6 @@ int join(void** stack)
 {
   struct proc *p;
   int havethreads, pid;
-
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for zombie children that are threads.
@@ -508,7 +507,7 @@ int join(void** stack)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-        *stack = (void*)p->tf->esp;
+        *stack = (void*)p->threadStackStart;
         release(&ptable.lock);
         return pid;
       }

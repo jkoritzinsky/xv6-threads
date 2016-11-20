@@ -218,7 +218,7 @@ exit(void)
 int
 wait(void)
 {
-  struct proc *p;
+  struct proc *p, *q;
   int havekids, pid;
 
   acquire(&ptable.lock);
@@ -234,12 +234,19 @@ wait(void)
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
-        freevm(p->pgdir);
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        for(q = ptable.proc; q < &ptable.proc[NPROC]; q++){
+          if(q->pgdir != p->pgdir)
+            continue;
+          q->pgdirRefcount--;
+        }
+        if(p->pgdirRefcount == 0) {
+          freevm(p->pgdir);
+        }
         release(&ptable.lock);
         return pid;
       }
@@ -464,6 +471,7 @@ int clone(void* fcnStart, void* arg, void* stack)
     return -1;
 
   np->pgdir = proc->pgdir;
+  np->pgdirRefcount = ++proc->pgdirRefcount;
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
@@ -478,11 +486,11 @@ int clone(void* fcnStart, void* arg, void* stack)
   ustack[0] = 0xffffffff;  // fake return PC
   ustack[1] = (uint)arg;
   
-  if(copyout(np->pgdir, (uint)stack, ustack, sizeof(ustack)) < 0)
+  if(copyout(np->pgdir, (uint)stack + PGSIZE - sizeof(ustack), ustack, sizeof(ustack)) < 0)
     goto bad;
   
   np->tf->eip = (uint)fcnStart;
-  np->tf->esp = (uint)stack;
+  np->tf->esp = (uint)stack + PGSIZE - sizeof(ustack);
   np->threadStackStart = stack;
   pid = np->pid;
   np->state = RUNNABLE;
@@ -498,7 +506,7 @@ int clone(void* fcnStart, void* arg, void* stack)
 
 int join(void** stack)
 {
-  struct proc *p;
+  struct proc *p, *q;
   int havethreads, pid;
   acquire(&ptable.lock);
   for(;;){
@@ -518,7 +526,13 @@ int join(void** stack)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        p->pgdirRefcount = 0;
         *stack = (void*)p->threadStackStart;
+        for(q = ptable.proc; q < &ptable.proc[NPROC]; q++){
+          if(q->pgdir != proc->pgdir || q == p)
+            continue;
+          p->pgdirRefcount--;
+        }
         release(&ptable.lock);
         return pid;
       }

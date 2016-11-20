@@ -2,6 +2,8 @@
 #define _USER_H_
 
 struct stat;
+struct lock;
+typedef struct lock lock_t;
 
 // system calls
 int fork(void);
@@ -38,19 +40,17 @@ void printf(int, char*, ...);
 char* gets(char*, int max);
 uint strlen(char*);
 void* memset(void*, int, uint);
-void* malloc(uint);
+void* malloc(uint
+);
 void free(void*);
 int atoi(const char*);
 
 int thread_create(void (*start_routine)(void*), void* arg);
 int thread_join();
 
-typedef struct {
-
-} lock_t;
-int lock_init(lock_t *);
-int lock_acquire(lock_t *);
-int lock_release(lock_t *);
+void lock_init(lock_t *);
+void lock_acquire(lock_t *);
+void lock_release(lock_t *);
 
 #endif // _USER_H_
 
